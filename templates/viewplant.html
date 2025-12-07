@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}หน้าหลัก{% endblock %}
+
+{% block content %}
+<div class="nav-breadcrumb">
+    {% if plant %}
+    <a href="{{ url_for('home') }}">หน้าหลัก</a>
+    <span>›</span>
+    <span id="nameinfoplant">{{ plant.plantName }}</span>
+</div>
+
+<div class="info-cards" id="info-cards">
+    <p>
+        {% if plant.picture %}
+        {% for img in plant.picture.split('|') %}
+        <img src="{{ url_for('static', filename=img.strip()) }}"
+            style="width:150px; height:150px; object-fit:cover; margin:5px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,0.2);">
+        {% endfor %}
+
+        {% else %}
+        <img src="{{ url_for('static', filename='uploads/no_image.png') }}" alt="ไม่มีรูป" width="200">
+        {% endif %}
+    </p>
+
+    <section class="plant-section">
+        <h3>🌱 ข้อมูลพืช</h3>
+        <p><strong>ชื่อพืช:</strong> {{ plant.plantName }}</p>
+        <p><strong>การเตรียมดิน:</strong> {{ plant.prepare }}</p>
+        <p><strong>การดูแลรักษา:</strong> {{ plant.care }}</p>
+    </section>
+
+    <section class="plant-section">
+        <h3>🌿 วิธีการปลูก</h3>
+        {% if methods %}
+        <ul>
+            {% for method in methods %}
+            <li>{{ method.plantingMethod }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>ไม่มีข้อมูลวิธีการปลูก</p>
+        {% endif %}
+    </section>
+
+    <section class="plant-section">
+        <h3>🦠 โรคที่เกี่ยวข้องกับพืชนี้</h3>
+        {% if diseases %}
+        <div class="disease-list">
+            {% for disease in diseases %}
+            <div class="disease-card">
+                <button class="toggle-btn" onclick="toggleDisease('{{ loop.index0 }}')">
+                    <span class="arrow">▶</span> {{ disease.diseaseName }}
+                </button>
+                <div class="disease-details" id="disease-{{ loop.index0 }}" style="display:none;">
+                    <p><strong>อาการ:</strong> {{ disease.symptoms }}</p>
+
+                    <p><strong>วิธีรักษา:</strong></p>
+                    {% if disease.treatments %}
+                    <ul>
+                        {% for t in disease.treatments %}
+                        <li>{{ t }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>ไม่มีข้อมูลวิธีรักษา</p>
+                    {% endif %}
+
+                    {% if disease.medicines %}
+                    <p><strong>ยาที่ใช้:</strong></p>
+                    <ul>
+                        {% for med in disease.medicines %}
+                        <li>{{ med.medicineName }} — {{ med.dosage }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>ไม่มีข้อมูลยา</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>ไม่มีข้อมูลโรคที่เกี่ยวข้อง</p>
+        {% endif %}
+    </section>
+
+
+</div>
+{% else %}
+<div class="alert alert-info">
+    <h4>ไม่พบข้อมูลพืช</h4>
+    <p>ยังไม่มีพืชในระบบ หรือเกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+</div>
+{% endif %}
+<script>
+    function toggleDisease(index) {
+        const detail = document.getElementById(`disease-${index}`);
+        const btn = document.querySelector(`button[onclick="toggleDisease('${index}')"]`);
+        const arrow = btn.querySelector(".arrow");
+
+        if (detail.style.display === "none" || detail.style.display === "") {
+            detail.style.display = "block";
+            arrow.textContent = "▼";   // เปลี่ยนเป็นลูกศรคว่ำ
+        } else {
+            detail.style.display = "none";
+            arrow.textContent = "▶";   // กลับเป็นลูกศรขวา
+        }
+    }
+</script>
+{% endblock %}

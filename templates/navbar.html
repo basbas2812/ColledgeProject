@@ -1,0 +1,36 @@
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <i class="fas fa-seedling"></i>
+            <a href="{{ url_for('home') }}">
+                <span>เว็บไซต์ให้คำแนะนำเกี่ยวกับพืชผักสวนครัว</span>
+            </a>
+        </div>
+        <div class="nav-links">
+
+            {% if session.get('user_type') == 'expert' %}
+            <a href="{{ url_for('add_plant_page') }}">เพิ่มข้อมูลพืช</a>
+                {% if session.get('expert_id') == 'E0000' %}
+                <a href="{{ url_for('upload_expert_page') }}">อัพโหลดผู้เชี่ยวชาญ</a>
+                {% endif %}
+            <a href="{{ url_for('list_suggest') }}">คำปรึกษาที่ยังไม่ตอบ</a>
+            {% endif %}
+
+            {% if session.get('user_type') == 'user' %}
+            <a href="{{ url_for('analyze') }}">วิเคราะห์โรคพืช</a>
+            <a href="{{ url_for('view_suggest_by_id', user_id=session.get('user_id')) }}">ดูผลลัพธ์จากผู้เชี่ยวชาญ</a>
+            {% endif %}
+
+            {% if not session.get('logged_in') %}
+            <a href="{{ url_for('register') }}">สมัครสมาชิก</a>
+            <a href="{{ url_for('login') }}">เข้าสู่ระบบ</a>
+            {% endif %}
+
+            {% if session.get('logged_in') %}
+            <a href="{{ url_for('editprofile') }}"><i class="fas fa-user-circle"></i></a>
+            <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i></a>
+            {% endif %}
+            
+        </div>
+    </nav>
+</header>

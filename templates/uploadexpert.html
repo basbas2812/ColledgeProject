@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}หน้าหลัก{% endblock %}
+
+{% block content %}
+
+<main class="container">
+    <h2>อัพโหลดข้อมูลผู้เชี่ยวชาญ (Excel)</h2>
+    <h3 style="margin-top:30px;">📄 ตัวอย่างข้อมูลในไฟล์ Excel</h3>
+    <table border="1" cellpadding="5" style="margin-top:10px;">
+        <tr>
+            <th>expertName</th>
+            <th>password</th>
+            <th>email</th>
+            <th>address</th>
+        </tr>
+        <tr>
+            <td>นาย A</td>
+            <td>pass123</td>
+            <td>a@mail.com</td>
+            <td>เชียงใหม่</td>
+        </tr>
+        <tr>
+            <td>นาย B</td>
+            <td>pass456</td>
+            <td>b@mail.com</td>
+            <td>ลำพูน</td>
+        </tr>
+    </table><br>
+    <p style="margin-top:10px; color:#555;">* กรุณาใส่ข้อมูลตั้งแต่แถวที่ 2 เป็นต้นไป (แถวแรกเป็นหัวตาราง)</p>
+
+    <form action="{{ url_for('upload_expert') }}" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".xlsx" required>
+        <button type="submit">Upload File</button>
+    </form>
+    {% if count %}
+    <div class="alert alert-success" style="margin-top:20px;">
+        ✅ อัปโหลดผู้เชี่ยวชาญสำเร็จ {{ count }} คน
+        <ul style="margin-top:10px;">
+            {% for name in names %}
+            <li>👤 {{ name }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</main>
+{% endblock %}

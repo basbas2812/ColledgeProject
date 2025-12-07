@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}สมัครสมาชิก{% endblock %}
+
+{% block content %}
+<div class="form-box">
+  <div class="login-card">
+    <h1>สมัครสมาชิก</h1>
+
+    <!-- ✅ ส่วนแสดง Alert -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alert-container">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('register_submit') }}" method="POST">
+        <div class="form-group">
+            <label for="username"><i class="fas fa-user"></i> ชื่อผู้ใช้:</label>
+            <input type="text" id="username" name="username" placeholder="กรุณาใส่ชื่อผู้ใช้" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email"><i class="fas fa-envelope"></i> อีเมล:</label>
+            <input type="email" id="email" name="email" placeholder="example@email.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password"><i class="fas fa-lock"></i> รหัสผ่าน:</label>
+            <input type="password" id="password" name="password" placeholder="กรุณาใส่รหัสผ่าน" required>
+        </div>
+
+        <div class="form-group">
+            <label for="address"><i class="fas fa-map-marker-alt"></i> ที่อยู่:</label>
+            <textarea id="address" name="address" placeholder="กรุณาใส่ที่อยู่ของคุณ..." required></textarea>
+        </div>
+
+        <button type="submit" class="submit-btn">
+            <i class="fas fa-user-plus"></i> สมัครสมาชิก
+        </button>
+    </form>
+
+    <div class="login-link">
+        <p>มีบัญชีอยู่แล้ว? <a href="{{ url_for('login') }}">เข้าสู่ระบบ</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

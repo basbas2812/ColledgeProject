@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}หน้าหลัก{% endblock %}
+{% block content %}
+
+<main class="container mt-4">
+  {% if consultations %}
+  <h2 class="mb-4">📋 รายการคำปรึกษาของคุณ</h2>
+
+  {% for row in consultations %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+      <strong>คำปรึกษา #{{ row.consultationId }}</strong>
+      <span class="badge bg-light text-dark float-end">{{ row.consultationStatus }}</span>
+    </div>
+
+    <div class="card-body">
+
+      <!-- 🔹 ผลลัพธ์แต่ละโรค -->
+      {% if row.sortedGroups and row.sortedGroups|length > 0 %}
+      {% for g in row.sortedGroups %}
+      {% set disease = g["disease"] %}
+      {% set items = g["items"] %}
+      <div style="margin-bottom:20px; padding:15px; border:1px solid #ccc; border-radius:10px;">
+
+        {% if disease == "ไม่พบโรค" %}
+        <!-- 🔹 กรณีไม่พบโรค -->
+        <h4 style="color:#d9534f;">🦠 โรค: {{ disease }}</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin:10px 0;">
+          {% for item in items %}
+          <div style="text-align:center;">
+            {% if item["image"] %}
+            <img src="{{ url_for('static', filename=item['image'].strip()) }}" alt="{{ item['ไฟล์'] }}" class="img-preview">
+            {% endif %}
+            <small>{{ item["ไฟล์"] }}</small><br>
+            <small style="color:#555;">ความถูกต้อง: {{ item["เปอร์เซ็นต์ความถูกต้อง"] or "ไม่ระบุ" }}%</small>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <!-- 🔹 กรณีพบโรค -->
+        <h4 style="color:#2e7d32;">🦠 โรค: {{ disease }} ({{ g["count"] }} ภาพ)</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin:10px 0;">
+          {% for item in items %}
+          <div style="text-align:center;">
+            {% if item["image"] %}
+            <img src="{{ url_for('static', filename=item['image'].strip()) }}" alt="{{ item['ไฟล์'] }}" class="img-preview">
+            {% endif %}
+            <small>{{ item["ไฟล์"] }}</small><br>
+            <small style="color:#555;">ความถูกต้อง: {{ item["เปอร์เซ็นต์ความถูกต้อง"] or "ไม่ระบุ" }}%</small>
+          </div>
+          {% endfor %}
+        </div>
+        <p><b>อาการ:</b> {{ items[0]["อาการ"] or items[0]["รายละเอียด"] or "ไม่มีข้อมูล" }}</p>
+        <p><b>วิธีรักษา:</b> {{ items[0]["วิธีรักษา"] or "ไม่มีข้อมูล" }}</p>
+        <p><b>ยา:</b> {{ items[0]["ยา"] or "ไม่มีข้อมูล" }}</p>
+        <p><b>ขนาดยา:</b> {{ items[0]["ขนาดยา"] or "ไม่มีข้อมูล" }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      {% else %}
+      <!-- ✅ fallback: ไม่มีผลลัพธ์จาก ML แต่มีรูป -->
+      <div style="margin-bottom:15px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+        <h4 style="color:#d9534f;">⚠️ ไม่พบผลการวิเคราะห์จากระบบ</h4>
+        <p>ระบบไม่สามารถวิเคราะห์พืชชนิดนี้ได้ กรุณาส่งต่อให้ผู้เชี่ยวชาญ</p>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin:10px 0;">
+          {% if row.consultationImage %}
+          {% for img in row.consultationImage.split('|') %}
+          <div style="text-align:center;">
+            <img src="{{ url_for('static', filename=img.strip()) }}" alt="uploaded image"
+              style="max-width:120px; border-radius:6px; display:block; margin-bottom:5px;">
+            <small>{{ img.split('/')[-1] }}</small>
+          </div>
+          {% endfor %}
+          {% else %}
+          <p style="color:#999;">❌ ไม่มีรูปที่อัปโหลดมา</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- 🔹 ผลลัพธ์รวม -->
+      <div class="mb-4">
+        <h3 class="section-header mb-3"><i class="fas fa-microscope"></i> 🔍 ผลการวิเคราะห์</h3>
+        <p><b>📌 สรุปผลรวม:</b> {{ row.summary or 'ไม่สามารถสรุปได้' }}</p>
+        <p><b>📊 ค่าเฉลี่ยความถูกต้อง:</b> {{ row.avgConfidence }}%</p><br>
+      </div>
+
+      <!-- 🔹 ข้อความจากผู้ใช้ -->
+      <div class="consult-message mb-3">
+        <h5 class="section-title">📝 ข้อความของคุณ</h5>
+        <p>{{ row.consultationMessage or '-' }}</p>
+      </div>
+
+      <!-- 🔹 คำตอบจากผู้เชี่ยวชาญ -->
+      <div class="consult-meta">
+        <h5 class="section-title">👨‍⚕️ คำตอบจากผู้เชี่ยวชาญ</h5>
+        {% if row.adviceMessage %}
+          <!-- ถ้ามีคำตอบแล้ว แสดงวันที่ตอบ -->
+          <p><b>วันที่ผู้เชี่ยวชาญตอบกลับ:</b> {{ row.adDateTime or '-' }}</p>
+        {% else %}
+          <!-- ถ้ายังไม่มีคำตอบ แสดงวันที่ส่งคำปรึกษา -->
+          <p><b>วันที่ส่งคำปรึกษา:</b> {{ row.consultationDate }}</p>
+        {% endif %}
+        <p><b>สถานะ:</b> {{ row.consultationStatus }}</p>
+        <p><b>คำตอบ:</b> {{ row.adviceMessage or '⏳ ยังไม่มีคำตอบ' }}</p>
+        <p><b>ผู้เชี่ยวชาญ:</b> {{ row.expertName or '-' }}</p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% else %}
+  <div class="alert alert-info mt-4">
+    <p>ไม่พบคำปรึกษาในระบบ</p>
+  </div>
+  {% endif %}
+</main>
+
+{% endblock %}

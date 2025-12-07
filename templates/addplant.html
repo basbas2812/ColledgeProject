@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block title %}หน้าหลัก{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <div class="form-card">
+        <div class="section-header">
+            <i class="fas fa-plus-circle"></i>
+            <h1>เพิ่มข้อมูลพืช</h1>
+        </div>
+
+        <form id="plantForm" action="{{ url_for('add_submit_plant') }}" method="POST" enctype="multipart/form-data">
+
+            <!-- ข้อมูลพื้นฐานของพืช -->
+            <div class="section-header">
+                <i class="fas fa-seedling"></i>
+                <h2>ข้อมูลพื้นฐานพืช</h2>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">รูปภาพพืช</label>
+                <input type="file" id="plantImage" name="plantImage" accept="image/*" multiple>
+            </div>
+            <div id="previewContainer" style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;"></div>
+
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="plantName">ชื่อพืช *</label>
+                    <input type="text" id="plantName" name="plantName" class="form-input" placeholder="เช่น มะเขือเทศ"
+                        required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="plantType">ประเภทพืช</label>
+                    <select id="plantType" name="plantType" class="form-select">
+                        <option value="">เลือกประเภท</option>
+                        <option value="พืชไร่">พืชไร่</option>
+                        <option value="พืชผัก">พืชผัก</option>
+                        <option value="ไม้ผล">ไม้ผล</option>
+                        <option value="ไม้ดอก">ไม้ดอก</option>
+                        <option value="ไม้ประดับ">ไม้ประดับ</option>
+                        <option value="สมุนไพร">สมุนไพร</option>
+                        <option value="พืชให้ผลและเมล็ด">พืชให้ผลและเมล็ด</option>
+                        <option value="พืชให้หัว">พืชให้หัว</option>
+                        <option value="พืชให้ความหวานและน้ำมัน">พืชให้ความหวานและน้ำมัน</option>
+                        <option value="พืชใช้ใบ">พืชใช้ใบ</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="description">คำอธิบาย</label>
+                <textarea id="description" name="description" class="form-textarea"
+                    placeholder="อธิบายเกี่ยวกับพืชชนิดนี้"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="careInstructions">วิธีการดูแล *</label>
+                    <textarea id="careInstructions" name="careInstructions" class="form-textarea"
+                        placeholder="วิธีการดูแลเบื้องต้น" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="plantPrepare">วิธีการเตรียม *</label>
+                    <textarea id="plantPrepare" name="plantPrepare" class="form-textarea"
+                        placeholder="วิธีการเตรียม" required></textarea>
+                </div>
+            </div>
+
+            <!-- วิธีการปลูก -->
+            <div class="section-header">
+                <i class="fas fa-hand-holding-seedling"></i>
+                <h2>วิธีการปลูก</h2>
+            </div>
+
+            <div class="dynamic-section" id="plantingSection">
+                <div class="item-container">
+                    <div class="item-header">
+                        <span class="item-title">วิธีการปลูกที่ 1</span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">วิธีการปลูก *</label>
+                        <textarea name="plantingMethods[]" class="form-textarea"
+                            placeholder="อธิบายวิธีการปลูก เช่น การเพาะเมล็ด การใส่ปุ่ย" required></textarea>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="add-btn" onclick="addPlantingMethod()">
+                <i class="fas fa-plus"></i> เพิ่มวิธีการปลูก
+            </button>
+
+            <!-- ข้อมูลโรคและการรักษา -->
+            <div class="section-header">
+                <i class="fas fa-virus"></i>
+                <h2>โรคและวิธีการรักษา</h2>
+            </div>
+
+            <div class="dynamic-section" id="diseaseSection">
+                <!-- โรคจะถูกเพิ่มที่นี่ -->
+            </div>
+            <button type="button" class="add-btn" onclick="addDisease()">
+                <i class="fas fa-plus"></i> เพิ่มข้อมูลโรค
+            </button>
+
+            <div class="submit-section">
+                <button type="button" class="cancel-btn" onclick="window.history.back()">
+                    <i class="fas fa-times"></i> ยกเลิก
+                </button>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-save"></i> บันทึกข้อมูล
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let plantingCount = 1;
+    let diseaseCount = 0;
+
+    // Handle image preview
+    document.getElementById('plantImage').addEventListener('change', function (e) {
+        const files = e.target.files;
+        const previewContainer = document.getElementById('previewContainer');
+        previewContainer.innerHTML = ""; // เคลียร์ก่อน
+
+        Array.from(files).forEach(file => {
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.width = "120px";
+                    img.style.borderRadius = "6px";
+                    img.style.boxShadow = "0 1px 4px rgba(0,0,0,0.2)";
+                    previewContainer.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    });
+
+
+    function addPlantingMethod() {
+        plantingCount++;
+        const section = document.getElementById('plantingSection');
+        const div = document.createElement('div');
+        div.className = 'item-container';
+        div.innerHTML = `
+                <div class="item-header">
+                    <span class="item-title">วิธีการปลูกที่ ${plantingCount}</span>
+                    <button type="button" class="remove-btn" onclick="removePlanting(this)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">วิธีการปลูก</label>
+                    <textarea name="plantingMethods[]" class="form-textarea" placeholder="อธิบายวิธีการปลูก"></textarea>
+                </div>
+            `;
+        section.appendChild(div);
+    }
+
+    function removePlanting(button) {
+        button.closest('.item-container').remove();
+        updatePlantingNumbers();
+    }
+
+    function updatePlantingNumbers() {
+        const containers = document.querySelectorAll('#plantingSection .item-container');
+        containers.forEach((container, index) => {
+            const title = container.querySelector('.item-title');
+            title.textContent = `วิธีการปลูกที่ ${index + 1}`;
+        });
+        plantingCount = containers.length;
+    }
+
+    function addDisease() {
+        diseaseCount++;
+        const section = document.getElementById('diseaseSection');
+        const div = document.createElement('div');
+        div.className = 'item-container';
+        div.innerHTML = `
+                <div class="item-header">
+                    <span class="item-title">โรคที่ ${diseaseCount}</span>
+                    <button type="button" class="remove-btn" onclick="removeDisease(this)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">ชื่อโรค *</label>
+                        <input type="text" name="diseaseNames[]" class="form-input" placeholder="เช่น โรคใบไหม้" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">อาการ *</label>
+                        <textarea name="diseaseSymptoms[]" class="form-textarea" placeholder="อธิบายอาการของโรค" required></textarea>
+                    </div>
+                </div>
+
+                <!-- วิธีการรักษา -->
+                <div class="treatment-section" data-disease="${diseaseCount}">
+                    <h4 style="color: #f59e0b; margin: 1rem 0;">วิธีการรักษา</h4>
+                    <div class="treatment-container">
+                        <div class="treatment-item">
+                            <div class="form-group">
+                                <label class="form-label">วิธีการรักษา</label>
+                                <textarea name="treatmentMethods[${diseaseCount}][]" class="form-textarea" placeholder="อธิบายวิธีการรักษา"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="add-btn" onclick="addTreatment(${diseaseCount})" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                        <i class="fas fa-plus"></i> เพิ่มวิธีรักษา
+                    </button>
+                </div>
+
+                <!-- ยาที่ใช้ -->
+                <div class="medicine-section" data-disease="${diseaseCount}">
+                    <h4 style="color: #e879f9; margin: 1rem 0;">ยาที่ใช้รักษา</h4>
+                    <div class="medicine-container">
+                        <!-- เริ่มต้นว่าง ไม่มี input -->
+                    </div>
+                    <button type="button" class="add-btn" onclick="addMedicine(${diseaseCount})" 
+                            style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                        <i class="fas fa-plus"></i> เพิ่มยา
+                    </button>
+                </div>
+            `;
+        section.appendChild(div);
+    }
+
+    function removeDisease(button) {
+        button.closest('.item-container').remove();
+        updateDiseaseNumbers();
+    }
+
+    function updateDiseaseNumbers() {
+        const containers = document.querySelectorAll('#diseaseSection .item-container');
+        containers.forEach((container, index) => {
+            const title = container.querySelector('.item-title');
+            title.textContent = `โรคที่ ${index + 1}`;
+        });
+        diseaseCount = containers.length;
+    }
+
+    function addTreatment(diseaseIndex) {
+        const section = document.querySelector(`[data-disease="${diseaseIndex}"] .treatment-container`);
+        const div = document.createElement('div');
+        div.className = 'treatment-item';
+        div.innerHTML = `
+                <div class="form-group" style="position: relative;">
+                    <label class="form-label">วิธีการรักษาเพิ่มเติม</label>
+                    <textarea name="treatmentMethods[${diseaseIndex}][]" class="form-textarea" placeholder="อธิบายวิธีการรักษา"></textarea>
+                    <button type="button" class="remove-btn" onclick="this.closest('.treatment-item').remove()" style="position: absolute; top: -5px; right: -5px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+        section.appendChild(div);
+    }
+
+    function addMedicine(diseaseIndex) {
+        const section = document.querySelector(`[data-disease="${diseaseIndex}"] .medicine-container`);
+        const div = document.createElement('div');
+        div.className = 'medicine-item';
+        div.innerHTML = `
+        <div class="form-row-3" style="position: relative;">
+            <div class="form-group">
+                <label class="form-label">ชื่อยา</label>
+                <input type="text" name="medicineNames[${diseaseIndex}][]" class="form-input" placeholder="ชื่อยาหรือสารเคมี">
+            </div>
+            <div class="form-group">
+                <label class="form-label">ปริมาณ *ใช้หน่วยต่อน้ำ20ลิตร</label>
+                <input type="number" name="medicineDosages[${diseaseIndex}][]" class="form-input" placeholder="จำนวน" step="0.01">
+            </div>
+            <div class="form-group">
+                <label class="form-label">หน่วย</label>
+                <select name="medicineUnits[${diseaseIndex}][]" class="form-select">
+                    <option value="ml">มิลลิลิตร (ml)</option>
+                    <option value="กรัม">กรัม (g)</option>
+                    <option value="ช้อนชา">ช้อนชา</option>
+                    <option value="ช้อนโต๊ะ">ช้อนโต๊ะ</option>
+                    <option value="ซีซี">ซีซี</option>
+                </select>
+            </div>
+            <button type="button" class="remove-btn" 
+                    onclick="this.closest('.medicine-item').remove()" 
+                    style="position: absolute; top: 25px; right: -15px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+        section.appendChild(div);
+    }
+
+
+    // ✅ Handle form submission with error handling
+    document.getElementById('plantForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const plantName = document.getElementById('plantName').value.trim();
+        const careInstructions = document.getElementById('careInstructions').value.trim();
+        const plantPrepare = document.getElementById('plantPrepare').value.trim();
+
+        // ✅ 1. ตรวจสอบข้อมูลพื้นฐาน
+        const errors = [];
+
+        if (!plantName) {
+            errors.push('กรุณากรอกชื่อพืช');
+        }
+
+        if (!careInstructions) {
+            errors.push('กรุณากรอกวิธีการดูแล');
+        }
+
+        if (!plantPrepare) {
+            errors.push('กรุณากรอกวิธีการเตรียม');
+        }
+
+        // ✅ 2. ตรวจสอบวิธีการปลูก (ต้องมีอย่างน้อย 1 วิธี)
+        const plantingMethods = document.querySelectorAll('textarea[name="plantingMethods[]"]');
+        const hasValidPlanting = Array.from(plantingMethods).some(el => el.value.trim() !== '');
+        if (!hasValidPlanting) {
+            errors.push('กรุณาเพิ่มวิธีการปลูกอย่างน้อย 1 วิธี');
+        }
+
+        // ✅ 3. ตรวจสอบโรค (ถ้ามีโรค ต้องมีชื่อและอาการ)
+        const diseaseNames = document.querySelectorAll('input[name="diseaseNames[]"]');
+        const diseaseSymptoms = document.querySelectorAll('textarea[name="diseaseSymptoms[]"]');
+        
+        diseaseNames.forEach((nameInput, index) => {
+            const name = nameInput.value.trim();
+            const symptom = diseaseSymptoms[index]?.value.trim() || '';
+            
+            if (!name && symptom) {
+                errors.push(`โรคที่ ${index + 1}: กรุณากรอกชื่อโรค`);
+            }
+            if (name && !symptom) {
+                errors.push(`โรคที่ ${index + 1} (${name}): กรุณากรอกอาการ`);
+            }
+        });
+
+        // ✅ 4. ตรวจสอบยา (ถ้ามี ต้องมีชื่อและปริมาณ)
+        const medicineNames = document.querySelectorAll('input[name*="medicineNames"]');
+        const medicineDosages = document.querySelectorAll('input[name*="medicineDosages"]');
+        
+        medicineNames.forEach((nameInput, index) => {
+            const name = nameInput.value.trim();
+            const dosage = medicineDosages[index]?.value.trim() || '';
+            
+            if (name && !dosage) {
+                errors.push(`ยา "${name}": กรุณากรอกปริมาณ`);
+            }
+            if (!name && dosage) {
+                errors.push(`ยาที่ ${index + 1}: กรุณากรอกชื่อยา`);
+            }
+        });
+
+        // ✅ 5. ถ้ามี error ให้แสดง
+        if (errors.length > 0) {
+            alert('❌ ข้อมูลไม่ครบถ้วน:\n\n' + errors.join('\n'));
+            return;
+        }
+
+        // ✅ 6. ส่งข้อมูล
+        const formData = new FormData(this);
+        const submitBtn = document.querySelector('.submit-btn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+        submitBtn.disabled = true;
+
+        fetch(this.action, {
+            method: 'POST',
+            body: formData
+        })
+            .then(async response => {
+                const data = await response.json().catch(() => ({}));
+                if (response.ok) {
+                    alert(data.message || '✅ บันทึกข้อมูลพืชสำเร็จ!');
+                    window.location.href = "{{ url_for('home') }}";
+                } else {
+                    alert('❌ ' + (data.message || 'เกิดข้อผิดพลาด'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ เกิดข้อผิดพลาดในการส่งข้อมูล');
+            })
+            .finally(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+    });
+</script>
+{% endblock %}

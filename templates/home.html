@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}หน้าหลัก{% endblock %}
+
+{% block content %}
+<!-- 🔹 ฟอร์มค้นหา -->
+<form id="searchForm" onsubmit="return false;">
+    <input type="text" id="searchInput" name="search" placeholder="ค้นหาชื่อพืช" />
+    <select id="plantTypeSelect" name="plantType">
+        <option value="">ทุกประเภท</option>
+        <option value="พืชไร่">พืชไร่</option>
+        <option value="พืชผัก">พืชผัก</option>
+        <option value="ไม้ผล">ไม้ผล</option>
+        <option value="ไม้ดอก">ไม้ดอก</option>
+        <option value="ไม้ประดับ">ไม้ประดับ</option>
+        <option value="สมุนไพร">สมุนไพร</option>
+        <option value="พืชให้ผลและเมล็ด">พืชให้ผลและเมล็ด</option>
+        <option value="พืชให้หัว">พืชให้หัว</option>
+        <option value="พืชให้ความหวานและน้ำมัน">พืชให้ความหวานและน้ำมัน</option>
+        <option value="พืชใช้ใบ">พืชใช้ใบ</option>
+    </select>
+</form>
+
+<!-- 🔹 ส่วนแสดงผล -->
+<div id="plantResults">
+    {% if plants and plants|length > 0 %}
+    <div class="table-responsive">
+        <div class="plant-grid">
+            {% for p in plants %}
+            <div class="plant-card">
+                <a href="{{ url_for('view_plant', plant_id=p.plantId) }}">
+                    <img src="{{ p.image_url }}" alt="รูปพืช">
+                </a>
+
+                <div class="plant-info">
+                    <h3>{{ p.plantName }}</h3>
+                    <p>{{ p.description }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <h4>ยังไม่มีข้อมูลพืช</h4>
+        <p>กรุณาเพิ่มข้อมูลพืช หรือใช้การค้นหา</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    async function fetchPlants() {
+        const search = document.getElementById("searchInput").value;
+        const plantType = document.getElementById("plantTypeSelect").value;
+
+        const res = await fetch(`/home_search?search=${encodeURIComponent(search)}&plantType=${encodeURIComponent(plantType)}`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        });
+        const plants = await res.json();
+
+        const container = document.getElementById("plantResults");
+        if (plants.length === 0) {
+            container.innerHTML = `
+          <div class="alert alert-info">
+              <h4>ไม่พบข้อมูลพืช</h4>
+              <p>ยังไม่มีพืชในระบบ หรือเกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+          </div>`;
+            return;
+        }
+
+        // ✅ ใช้ url_for('static', filename='') เพื่อให้ path ถูกต้องเสมอ
+        const staticBase = "{{ url_for('static', filename='') }}";
+
+        container.innerHTML = `
+      <div class="plant-grid">
+        ${plants.map(p => `
+          <div class="plant-card">
+              <a href="/view_plant/${p.plantId}">
+                <img src="${p.image_url}" alt="รูปพืช">
+              </a>
+              <div class="plant-info">
+                  <h3>${p.plantName}</h3>
+                  <p>${p.description || ""}</p>
+              </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    }
+    document.getElementById("searchInput").addEventListener("keyup", fetchPlants);
+    document.getElementById("plantTypeSelect").addEventListener("change", fetchPlants);
+    document.addEventListener("DOMContentLoaded", fetchPlants);
+</script>
+{% endblock %}

@@ -1,0 +1,229 @@
+{% extends "base.html" %} {% block title %}หน้าหลัก{% endblock %} {% block
+content %}
+
+<main class="container">
+  <h2>อัปโหลดภาพใบพืช</h2>
+  <br />
+  <h3>
+    กรุณาอัพโหลดรูปใบของพืชเท่านั้นหากไม่ใช่ใบผลการวิเคราะห์อาจจะคลาดคลื่น
+  </h3>
+  <h3>
+    *ในกรณีที่ไม่มีพืชในตัวเลือกให้
+    ไม่ต้องเลือกหรือเลือกอื่นๆเพื่ออัพโหลดรูปส่งให้ผู้เชี่ยวชาญโดยตรง
+  </h3>
+  <br />
+  <form id="uploadForm" enctype="multipart/form-data">
+    <label for="plantType"><b>เลือกชนิดพืช:</b></label>
+    <select name="plantType" id="plantType" required>
+      <option value="">-- เลือกพืช --</option>
+      <option value="ข้าว">ข้าว</option>
+      <option value="ทุเรียน">ทุเรียน</option>
+      <option value="มะเขือเทศ">มะเขือเทศ</option>
+      <option value="ข้าวโพด">ข้าวโพด</option>
+      <option value="มันสำปะหลัง">มันสำปะหลัง</option>
+      <option value="orther">อื่นๆ</option>
+    </select>
+
+    <br /><br />
+    <input type="file" name="file" id="fileInput" multiple required />
+    <button type="submit" id="analyzeBtn">วิเคราะห์</button>
+  </form>
+
+  <!-- 🔹 ส่วนแสดงผลลัพธ์ -->
+  <div id="result" style="
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    ">
+    <p><strong>ผลการวิเคราะห์จะแสดงที่นี่</strong></p>
+  </div>
+
+  <div id="consultControls" style="margin-top: 20px"></div>
+</main>
+
+<script>
+  const plantSelect = document.getElementById("plantType");
+  const analyzeBtn = document.getElementById("analyzeBtn");
+
+  function updateAnalyzeButton() {
+    const selected = plantSelect.value;
+    if (selected === "" || selected === "orther") {
+      analyzeBtn.style.display = "none";
+    } else {
+      analyzeBtn.style.display = "inline-block";
+    }
+  }
+
+  updateAnalyzeButton();
+  plantSelect.addEventListener("change", updateAnalyzeButton);
+
+  let lastUploadFiles = [];
+  let lastAnalysis = null;
+
+  document.getElementById("uploadForm").onsubmit = async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+    const plantType = document.getElementById("plantType").value;
+    const files = e.target.file.files;
+    lastUploadFiles = Array.from(files);
+
+    formData.append("plantType", plantType);
+    for (let i = 0; i < files.length; i++) {
+      formData.append("file", files[i]);
+    }
+
+    const analyzablePlants = ["มันฝรั่ง", "ข้าว", "ทุเรียน", "มะเขือเทศ", "ข้าวโพด", "มันสำปะหลัง"];
+    const resultBox = document.getElementById("result");
+
+    if (plantType === "orther" || !analyzablePlants.includes(plantType)) {
+      resultBox.innerHTML = `
+        <div class="analysis-card">
+          <h3>📌 ผลการวิเคราะห์</h3>
+          <p style="color:#d9534f;"><b>ไม่มีผลการวิเคราะห์</b></p>
+          <p>ระบบไม่สามารถวิเคราะห์พืชชนิดนี้ได้ กรุณาส่งคำปรึกษาไปยังผู้เชี่ยวชาญ</p>
+        </div>`;
+      showConsultForm();
+      return;
+    }
+
+    const res = await fetch("/analyze_plant", { method: "POST", body: formData });
+    const data = await res.json();
+    lastAnalysis = data;
+
+    if (data.error) {
+      resultBox.innerHTML = `<div class="alert alert-danger">❌ ${data.error}</div>`;
+      showConsultForm();
+      return;
+    }
+
+    const results = data["ผลลัพธ์แต่ละภาพ"] || [];
+    const avgConfidence = data["ค่าเฉลี่ยความถูกต้อง"] || "ไม่ระบุ";
+    const summary = data["สรุปผลรวม"] || [];
+
+    let html = `
+      <div class="analysis-card">
+        <h3>📌 ผลการวิเคราะห์</h3>
+        <p><b>จำนวนภาพ:</b> ${results.length}</p>
+        <p><b>ค่าเฉลี่ยความถูกต้อง:</b> ${avgConfidence}%</p>
+        <b>สรุปผลรวม:</b>
+        <ul>
+    `;
+
+    if (Array.isArray(summary)) {
+      summary.forEach(item => {
+        html += `<li>${item}</li>`;
+      });
+    }
+
+    html += `
+        </ul>
+        <hr>
+      </div>
+    `;
+
+    // ✅ จัดกลุ่มผลลัพธ์ตามโรค
+    const grouped = {};
+    results.forEach((item, index) => {
+      const disease = item["โรค"] || "ไม่ระบุ";
+      if (!grouped[disease]) {
+        grouped[disease] = { details: item, images: [], items: [] };
+      }
+      const fileObj = lastUploadFiles[index];
+      const imgURL = fileObj ? URL.createObjectURL(fileObj) : "";
+      grouped[disease].images.push({ name: item["ไฟล์"], url: imgURL });
+      grouped[disease].items.push(item);
+    });
+
+    // ✅ แสดงผลรายโรค
+    for (const [disease, gdata] of Object.entries(grouped)) {
+      html += `
+        <div style="margin-bottom:15px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+          <h4 style="color:${disease === "ไม่พบโรค" ? "#d9534f" : "#2e7d32"};">🦠 โรค: ${disease}</h4>
+          <div style="display:flex; flex-wrap:wrap; gap:10px; margin:10px 0;">
+            ${gdata.images.map((img, idx) => `
+              <div style="text-align:center;">
+                <img src="${img.url}" alt="${img.name}" class="img-preview">
+                <small>${img.name}</small><br>
+                <small style="color:#555;">ความถูกต้อง: ${gdata.items[idx]["เปอร์เซ็นต์ความถูกต้อง"] || "ไม่ระบุ"}%</small>
+              </div>
+            `).join("")}
+          </div>
+          ${disease !== "ไม่พบโรค" ? `
+            <p><b>อาการ:</b> ${gdata.details["อาการ"] || gdata.details["รายละเอียด"] || "ไม่มีข้อมูล"}</p>
+            <p><b>วิธีรักษา:</b> ${gdata.details["วิธีรักษา"] || "ไม่มีข้อมูล"}</p>
+            <p><b>ยา:</b> ${gdata.details["ยา"] || "ไม่มีข้อมูล"}</p>
+            <p><b>ขนาดยา:</b> ${gdata.details["ขนาดยา"] || "ไม่มีข้อมูล"}</p>
+          ` : ""}
+        </div>
+      `;
+    }
+
+    html += `<p style="margin-top:10px; color:#555;">หากยังไม่มั่นใจในผลการวิเคราะห์ สามารถส่งคำปรึกษาเพิ่มเติมได้ด้านล่าง</p>`;
+    resultBox.innerHTML = html;
+
+    showConsultForm();
+  };
+
+  // ✅ ฟังก์ชันแสดงฟอร์มปรึกษาผู้เชี่ยวชาญ (เหมือนเดิม)
+  async function showConsultForm() {
+    const expertsRes = await fetch("/get_experts");
+    const experts = await expertsRes.json();
+    const options = experts.map(ex => `<option value="${ex.expertId}">${ex.expertName}</option>`).join("");
+
+    document.getElementById("consultControls").innerHTML = `
+      <div class="consult-card">
+        <h4>💬 ขอคำปรึกษาจากผู้เชี่ยวชาญ</h4>
+        <label for="expertSelect"><b>เลือกผู้เชี่ยวชาญ:</b></label>
+        <select id="expertSelect" class="form-control">${options}</select>
+        <label for="userMessage" style="margin-top:10px;"><b>ข้อมูลเพิ่มเติม/คำถาม:</b></label>
+        <textarea id="userMessage" rows="3" class="form-control" placeholder="อธิบายเพิ่มเติม"></textarea>
+        <button id="sendConsult" class="btn-consult">📩 ส่งคำปรึกษา</button>
+      </div>
+    `;
+
+    document.getElementById("sendConsult").onclick = async () => {
+      const sendBtn = document.getElementById("sendConsult");
+      sendBtn.disabled = true;
+      sendBtn.innerText = "⏳ กำลังส่ง...";
+
+      const expertId = document.getElementById("expertSelect").value;
+      const message = document.getElementById("userMessage").value;
+
+      const consultForm = new FormData();
+      lastUploadFiles.forEach((file) => consultForm.append("file", file));
+      consultForm.append("Mresult", JSON.stringify(lastAnalysis));
+      consultForm.append("status", "รอคำตอบ");
+      consultForm.append("expertId", expertId);
+      consultForm.append("message", message);
+
+      try {
+        const res = await fetch("/request_consult", {
+          method: "POST",
+          body: consultForm,
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          alert("✅ ส่งคำปรึกษาสำเร็จ หมายเลข: " + result.consultationId);
+          document.getElementById("consultControls").innerHTML = `
+        <div class="alert alert-success">
+          ✅ ส่งคำปรึกษาสำเร็จแล้ว (หมายเลข: ${result.consultationId})
+        </div>
+      `;
+        } else {
+          alert("❌ เกิดข้อผิดพลาด: " + (result.error || "ไม่สามารถส่งคำปรึกษาได้"));
+          sendBtn.disabled = false;
+          sendBtn.innerText = "📩 ส่งคำปรึกษา";
+        }
+      } catch (err) {
+        alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ");
+        sendBtn.disabled = false;
+        sendBtn.innerText = "📩 ส่งคำปรึกษา";
+      }
+    };
+
+  }
+</script>
+{% endblock %}
