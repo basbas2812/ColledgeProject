@@ -1,6 +1,6 @@
-# ColledgeProject </br>
+# ColledgeProject
 
-ขั้นตอนการรันโปรเจคนี้ </br>
+ขั้นตอนการรันโปรเจคนี้ </br></br>
 1.ดาวน์โหลดไฟล์ทั้งหมดนี้ </br>
 2.รันในไฟล์ app.py </br>
 3.หากต้องการใช้ Machine Learning ให้รันไฟล์ predictor.py ไว้ หากปิดจะไม่สามารถใช้ Machine Learning ได้ </br>
